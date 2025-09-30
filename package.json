@@ -1,4 +1,11 @@
 {
+  "name": "bioma-dash",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "node ./bin/server --port $PORT"
+  }
+{
   "author": "Roman Shtylman <shtylman@gmail.com>",
   "name": "localtunnel-server",
   "description": "expose localhost to the world",
