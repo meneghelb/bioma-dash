@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./bin/server --port $PORT"
-  }
+  },
 {
   "author": "Roman Shtylman <shtylman@gmail.com>",
   "name": "localtunnel-server",
