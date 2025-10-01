@@ -1,6 +1,6 @@
-// bin/server.js
-const http = require('http');
-const { createProxyServer } = require('http-proxy');
+// bin/server.js (ESM)
+import http from 'node:http';
+import httpProxy from 'http-proxy';
 
 const PORT = Number(process.env.PORT) || 10000;
 const TARGET = process.env.TARGET_URL || process.env.UPSTREAM;
@@ -10,15 +10,15 @@ if (!TARGET) {
   process.exit(1);
 }
 
-const proxy = createProxyServer({
+const proxy = httpProxy.createProxyServer({
   target: TARGET,
   changeOrigin: true,
-  secure: true, // Funnel tem HTTPS válido
+  secure: true, // Funnel entrega HTTPS válido
   ws: true,
 });
 
-// Reescreve Location de redirects para manter o domínio do Render
-proxy.on('proxyRes', (proxyRes, req, res) => {
+// Ajusta redirects para manter o domínio do Render
+proxy.on('proxyRes', (proxyRes, req) => {
   const loc = proxyRes.headers['location'];
   if (loc && loc.startsWith(TARGET)) {
     const publicBase = `https://${req.headers.host}`;
@@ -27,7 +27,7 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
 });
 
 proxy.on('error', (err, req, res) => {
-  console.error('Proxy error:', err.message);
+  console.error('Proxy error:', err?.message || err);
   if (!res.headersSent) res.writeHead(502);
   res.end('Bad gateway');
 });
