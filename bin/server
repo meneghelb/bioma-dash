@@ -1,66 +1,74 @@
-#!/usr/bin/env node -r esm
+#!/usr/bin/env node
+// Node 20 + ESM, sem 'esm' loader externo
 
+// ---- logger (usa 'debug' se disponível, senão console) ----
+let debug = (...args) => console.log('[localtunnel]', ...args);
+try {
+  const dbg = (await import('debug')).default;
+  debug = dbg('localtunnel');
+} catch { /* ok sem debug */ }
 
-import log from 'book';
-import Debug from 'debug';
+// ---- parse simples de argumentos (--port --address --secure --domain --max-sockets) ----
+const hasFlag = (name) => process.argv.includes(`--${name}`);
+const getArg  = (name, def) => {
+  const i = process.argv.indexOf(`--${name}`);
+  return (i !== -1 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--'))
+    ? process.argv[i + 1]
+    : def;
+};
 
-import CreateServer from '../server';
+const opts = {
+  secure: hasFlag('secure'),
+  port: parseInt(getArg('port', process.env.PORT || '80'), 10),
+  address: getArg('address', '0.0.0.0'),
+  domain: getArg('domain', undefined),
+  max_tcp_sockets: parseInt(getArg('max-sockets', '10'), 10),
+};
 
-const debug = Debug('localtunnel');
+if (hasFlag('help')) {
+  console.log(`
+Usage: node bin/server.js [--port <num>] [--address <ip>] [--secure] [--domain <base>]
+                          [--max-sockets <num>]
 
-const argv = optimist
-    .usage('Usage: $0 --port [num]')
-    .options('secure', {
-        default: false,
-        describe: 'use this flag to indicate proxy over https'
-    })
-    .options('port', {
-        default: '80',
-        describe: 'listen on this port for outside requests'
-    })
-    .options('address', {
-        default: '0.0.0.0',
-        describe: 'IP address to bind to'
-    })
-    .options('domain', {
-        describe: 'Specify the base domain name. This is optional if hosting localtunnel from a regular example.com domain. This is required if hosting a localtunnel server from a subdomain (i.e. lt.example.dom where clients will be client-app.lt.example.come)',
-    })
-    .options('max-sockets', {
-        default: 10,
-        describe: 'maximum number of tcp sockets each client is allowed to establish at one time (the tunnels)'
-    })
-    .argv;
-
-if (argv.help) {
-    optimist.showHelp();
-    process.exit();
+Env:   PORT (prioridade se --port não for passado)
+Default: --port ${process.env.PORT || 80} --address 0.0.0.0 --max-sockets 10
+`);
+  process.exit(0);
 }
 
+// ---- carrega CreateServer (tenta ../server/index.js e depois ../server.js) ----
+let CreateServer;
+try {
+  const mod = await import(new URL('../server/index.js', import.meta.url));
+  CreateServer = mod.default ?? mod.CreateServer ?? mod;
+} catch (e1) {
+  try {
+    const mod = await import(new URL('../server.js', import.meta.url));
+    CreateServer = mod.default ?? mod.CreateServer ?? mod;
+  } catch (e2) {
+    console.error('❌ Não foi possível carregar o módulo do servidor.');
+    console.error('Tentado: ../server/index.js e ../server.js');
+    console.error('Erros:', e1?.message || e1, '||', e2?.message || e2);
+    process.exit(1);
+  }
+}
+
+// ---- sobe o servidor ----
 const server = CreateServer({
-    max_tcp_sockets: argv['max-sockets'],
-    secure: argv.secure,
-    domain: argv.domain,
+  max_tcp_sockets: opts.max_tcp_sockets,
+  secure: opts.secure,
+  domain: opts.domain,
 });
 
-server.listen(argv.port, argv.address, () => {
-    debug('server listening on port: %d', server.address().port);
+server.listen(opts.port, opts.address, () => {
+  const p = server.address().port;
+  debug(`server listening on port: ${p}`);
+  console.log(`✅ listening at http://${opts.address}:${p}`);
 });
 
-process.on('SIGINT', () => {
-    process.exit();
-});
-
-process.on('SIGTERM', () => {
-    process.exit();
-});
-
-process.on('uncaughtException', (err) => {
-    log.error(err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    log.error(reason);
-});
-
-// vim: ft=javascript
-
+// ---- sinais & erros ----
+const exit = (code=0) => { try { server.close?.(); } catch {} process.exit(code); };
+process.on('SIGINT',  () => exit(0));
+process.on('SIGTERM', () => exit(0));
+process.on('uncaughtException', (err) => { console.error('uncaughtException:', err); });
+process.on('unhandledRejection', (reason) => { console.error('unhandledRejection:', reason); });
