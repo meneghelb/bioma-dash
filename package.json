@@ -1,17 +1,9 @@
 {
-  "type": "module",
-  "scripts": { "start": "node ./bin/server.js --port $PORT" }
-},
-{
   "name": "bioma-dash",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
-    "start": "node ./bin/server --port $PORT"
-  },
-  "dependencies": {}
+    "start": "node ./bin/server.js --port $PORT"
+  }
 }
