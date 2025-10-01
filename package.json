@@ -1,4 +1,8 @@
 {
+  "type": "module",
+  "scripts": { "start": "node ./bin/server.js --port $PORT" }
+},
+{
   "name": "bioma-dash",
   "version": "0.1.0",
   "private": true,
