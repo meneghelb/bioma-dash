@@ -5,5 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node ./bin/server.js --port $PORT"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.0",
+    "morgan": "^1.10.0"
   }
 }
